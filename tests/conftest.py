@@ -2,9 +2,10 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from app.main import app
-from app.database.session import Base, get_db
+
 from app.core.config import settings
+from app.database.session import Base, get_db
+from app.main import app
 
 # 测试数据库URL
 TEST_DATABASE_URL = settings.test_database_url
@@ -45,7 +46,7 @@ def client(db_session):
             yield db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c

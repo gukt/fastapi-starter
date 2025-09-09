@@ -1,20 +1,20 @@
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field, validator
 
 
 class UserBase(BaseModel):
     """用户基础模型"""
     email: EmailStr = Field(..., description="用户邮箱")
     username: str = Field(..., min_length=3, max_length=50, description="用户名")
-    full_name: Optional[str] = Field(None, max_length=100, description="全名")
+    full_name: str | None = Field(None, max_length=100, description="全名")
 
 
 class UserCreate(UserBase):
     """创建用户模型"""
     password: str = Field(..., min_length=8, description="密码")
-    
+
     @validator('password')
     def validate_password(cls, v):
         if len(v) < 8:
@@ -30,11 +30,11 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     """更新用户模型"""
-    email: Optional[EmailStr] = None
-    username: Optional[str] = Field(None, min_length=3, max_length=50)
-    full_name: Optional[str] = Field(None, max_length=100)
-    is_active: Optional[bool] = None
-    is_verified: Optional[bool] = None
+    email: EmailStr | None = None
+    username: str | None = Field(None, min_length=3, max_length=50)
+    full_name: str | None = Field(None, max_length=100)
+    is_active: bool | None = None
+    is_verified: bool | None = None
 
 
 class UserResponse(UserBase):
@@ -45,8 +45,8 @@ class UserResponse(UserBase):
     is_superuser: bool
     created_at: datetime
     updated_at: datetime
-    last_login: Optional[datetime] = None
-    
+    last_login: datetime | None = None
+
     class Config:
         from_attributes = True
 
@@ -66,15 +66,15 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     """令牌数据模型"""
-    user_id: Optional[UUID] = None
-    username: Optional[str] = None
+    user_id: UUID | None = None
+    username: str | None = None
 
 
 class PostBase(BaseModel):
     """文章基础模型"""
     title: str = Field(..., min_length=1, max_length=200, description="标题")
     content: str = Field(..., min_length=1, description="内容")
-    summary: Optional[str] = Field(None, max_length=500, description="摘要")
+    summary: str | None = Field(None, max_length=500, description="摘要")
     is_published: bool = Field(False, description="是否发布")
 
 
@@ -85,11 +85,11 @@ class PostCreate(PostBase):
 
 class PostUpdate(BaseModel):
     """更新文章模型"""
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    content: Optional[str] = Field(None, min_length=1)
-    summary: Optional[str] = Field(None, max_length=500)
-    is_published: Optional[bool] = None
-    slug: Optional[str] = Field(None, min_length=1, max_length=200)
+    title: str | None = Field(None, min_length=1, max_length=200)
+    content: str | None = Field(None, min_length=1)
+    summary: str | None = Field(None, max_length=500)
+    is_published: bool | None = None
+    slug: str | None = Field(None, min_length=1, max_length=200)
 
 
 class PostResponse(PostBase):
@@ -99,9 +99,9 @@ class PostResponse(PostBase):
     author_id: UUID
     created_at: datetime
     updated_at: datetime
-    published_at: Optional[datetime] = None
-    author: Optional[UserResponse] = None
-    
+    published_at: datetime | None = None
+    author: UserResponse | None = None
+
     class Config:
         from_attributes = True
 
@@ -109,8 +109,8 @@ class PostResponse(PostBase):
 class TagBase(BaseModel):
     """标签基础模型"""
     name: str = Field(..., min_length=1, max_length=50, description="标签名称")
-    description: Optional[str] = Field(None, max_length=500, description="描述")
-    color: Optional[str] = Field(None, regex="^#[0-9A-Fa-f]{6}$", description="颜色代码")
+    description: str | None = Field(None, max_length=500, description="描述")
+    color: str | None = Field(None, regex="^#[0-9A-Fa-f]{6}$", description="颜色代码")
 
 
 class TagCreate(TagBase):
@@ -120,9 +120,9 @@ class TagCreate(TagBase):
 
 class TagUpdate(BaseModel):
     """更新标签模型"""
-    name: Optional[str] = Field(None, min_length=1, max_length=50)
-    description: Optional[str] = Field(None, max_length=500)
-    color: Optional[str] = Field(None, regex="^#[0-9A-Fa-f]{6}$")
+    name: str | None = Field(None, min_length=1, max_length=50)
+    description: str | None = Field(None, max_length=500)
+    color: str | None = Field(None, regex="^#[0-9A-Fa-f]{6}$")
 
 
 class TagResponse(TagBase):
@@ -130,11 +130,11 @@ class TagResponse(TagBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
 
 class PostWithTags(PostResponse):
     """带标签的文章响应模型"""
-    tags: List[TagResponse] = Field([], description="标签列表")
+    tags: list[TagResponse] = Field([], description="标签列表")

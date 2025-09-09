@@ -1,7 +1,8 @@
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class ErrorCode(str, Enum):
@@ -18,9 +19,9 @@ class ErrorCode(str, Enum):
 
 class ApiResponse(BaseModel):
     """统一API响应格式"""
-    data: Optional[Any] = Field(None, description="响应数据")
+    data: Any | None = Field(None, description="响应数据")
     success: bool = Field(True, description="请求是否成功")
-    message: Optional[str] = Field(None, description="响应消息")
+    message: str | None = Field(None, description="响应消息")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="响应时间戳")
 
 
@@ -28,7 +29,7 @@ class ErrorResponse(BaseModel):
     """错误响应格式"""
     error: str = Field(..., description="错误代码")
     message: str = Field(..., description="错误消息")
-    details: Optional[Dict[str, Any]] = Field(None, description="错误详细信息")
+    details: dict[str, Any] | None = Field(None, description="错误详细信息")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="错误时间戳")
 
 
@@ -56,8 +57,8 @@ class PaginatedResponse(ApiResponse):
 
 class SortParams(BaseModel):
     """排序参数"""
-    sort_by: Optional[str] = Field(None, description="排序字段")
-    sort_order: Optional[str] = Field("asc", regex="^(asc|desc)$", description="排序方向")
+    sort_by: str | None = Field(None, description="排序字段")
+    sort_order: str | None = Field("asc", regex="^(asc|desc)$", description="排序方向")
 
 
 class FilterParams(BaseModel):

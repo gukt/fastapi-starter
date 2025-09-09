@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import List, Optional
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.auth import AuthService, get_current_active_user
-from app.core.decorators import handle_response, handle_exceptions
+from app.core.decorators import handle_exceptions, handle_response
 from app.core.logging import api_logger
 from app.database.session import get_db
 from app.models.models import User
-from app.models.schemas import UserCreate, UserResponse, UserUpdate, UserLogin, Token
-from app.utils.pagination import get_paginated_results, QueryParams
+from app.models.schemas import UserCreate, UserLogin, UserResponse, UserUpdate
+from app.utils.pagination import QueryParams, get_paginated_results
 
 router = APIRouter(prefix="/auth", tags=["认证"])
 
@@ -30,7 +30,7 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     # 检查用户名是否已存在
     result = await db.execute(select(User).where(User.username == user_data.username))
     if result.scalar_one_or_none():
@@ -38,7 +38,7 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
         )
-    
+
     # 创建新用户
     hashed_password = AuthService.get_password_hash(user_data.password)
     db_user = User(
@@ -47,11 +47,11 @@ async def register(
         full_name=user_data.full_name,
         hashed_password=hashed_password
     )
-    
+
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
-    
+
     api_logger.info(f"New user registered: {user_data.email}")
     return UserResponse.model_validate(db_user)
 
@@ -71,11 +71,11 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token = AuthService.create_access_token(
         data={"sub": str(user.id), "username": user.username}
     )
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -116,7 +116,7 @@ async def update_current_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
-    
+
     # 检查用户名是否已被其他用户使用
     if user_data.username and user_data.username != current_user.username:
         result = await db.execute(
@@ -130,15 +130,15 @@ async def update_current_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already taken"
             )
-    
+
     # 更新用户信息
     update_data = user_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(current_user, field, value)
-    
+
     await db.commit()
     await db.refresh(current_user)
-    
+
     api_logger.info(f"User updated: {current_user.email}")
     return UserResponse.model_validate(current_user)
 
@@ -148,17 +148,17 @@ async def update_current_user(
 @handle_exceptions()
 async def get_users(
     params: QueryParams = Depends(),
-    search: Optional[str] = Query(None, description="搜索邮箱或用户名"),
+    search: str | None = Query(None, description="搜索邮箱或用户名"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     """获取用户列表（需要登录）"""
     filters = {}
-    
+
     # 添加搜索功能
     if search:
         filters["search"] = search
-    
+
     result = await get_paginated_results(
         session=db,
         model=User,
@@ -169,7 +169,7 @@ async def get_users(
         search_term=search,
         search_fields=["email", "username", "full_name"]
     )
-    
+
     return {
         "items": [UserResponse.model_validate(user) for user in result["items"]],
         "meta": result["meta"]
@@ -187,11 +187,11 @@ async def get_user(
     """获取用户详情"""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    
+
     return UserResponse.model_validate(user)

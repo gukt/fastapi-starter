@@ -1,5 +1,4 @@
-from typing import List, Optional
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -25,9 +24,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     # CORS
-    allowed_hosts: List[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
-    allowed_methods: List[str] = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allowed_headers: List[str] = ["*"]
+    allowed_hosts: list[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
+    allowed_methods: list[str] = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    allowed_headers: list[str] = ["*"]
 
     # Logging
     log_level: str = "INFO"

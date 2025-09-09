@@ -1,8 +1,9 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import SQLAlchemyError
-from typing import AsyncGenerator
 import logging
+from collections.abc import AsyncGenerator
+
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import settings
 
@@ -59,21 +60,21 @@ async def drop_tables():
 
 class DatabaseManager:
     """数据库管理器"""
-    
+
     def __init__(self):
         self.engine = engine
         self.session_factory = AsyncSessionLocal
-    
+
     async def create_all_tables(self):
         """创建所有表"""
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-    
+
     async def drop_all_tables(self):
         """删除所有表"""
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-    
+
     async def get_session(self) -> AsyncSession:
         """获取数据库会话"""
         return self.session_factory()

@@ -1,14 +1,15 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 import time
 
-from app.core.config import settings
-from app.core.logging import setup_logging, app_logger
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.api.v1 import api_router
-from app.core.schemas import ErrorResponse, ErrorCode
+from app.core.config import settings
+from app.core.logging import app_logger, setup_logging
+from app.core.schemas import ErrorCode, ErrorResponse
 
 # 设置日志
 setup_logging()
@@ -18,7 +19,7 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="A FastAPI starter template for API projects",
-    openapi_url=f"/api/v1/openapi.json",
+    openapi_url="/api/v1/openapi.json",
     docs_url="/api/v1/docs",
     redoc_url="/api/v1/redoc",
     debug=settings.debug
@@ -37,7 +38,7 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    
+
     # 记录请求信息
     app_logger.info(f"Request started: {request.method} {request.url}", extra={
         "method": request.method,
@@ -45,9 +46,9 @@ async def log_requests(request: Request, call_next):
         "user_agent": request.headers.get("user-agent"),
         "client_ip": request.client.host
     })
-    
+
     response = await call_next(request)
-    
+
     # 记录响应信息
     process_time = time.time() - start_time
     app_logger.info(f"Request completed: {request.method} {request.url}", extra={
@@ -56,7 +57,7 @@ async def log_requests(request: Request, call_next):
         "status_code": response.status_code,
         "process_time": process_time
     })
-    
+
     return response
 
 # 全局异常处理
@@ -67,13 +68,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         "detail": exc.detail,
         "url": str(request.url)
     })
-    
+
     error_response = ErrorResponse(
         error=ErrorCode.BAD_REQUEST,
         message=exc.detail,
         details={"status_code": exc.status_code}
     )
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=error_response.model_dump()
@@ -85,13 +86,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         "errors": exc.errors(),
         "url": str(request.url)
     })
-    
+
     error_response = ErrorResponse(
         error=ErrorCode.VALIDATION_ERROR,
         message="Validation error",
         details={"errors": exc.errors()}
     )
-    
+
     return JSONResponse(
         status_code=422,
         content=error_response.model_dump()
@@ -104,13 +105,13 @@ async def general_exception_handler(request: Request, exc: Exception):
         "exception_message": str(exc),
         "url": str(request.url)
     })
-    
+
     error_response = ErrorResponse(
         error=ErrorCode.INTERNAL_ERROR,
         message="Internal server error",
         details={"exception_type": type(exc).__name__}
     )
-    
+
     return JSONResponse(
         status_code=500,
         content=error_response.model_dump()

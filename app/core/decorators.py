@@ -1,18 +1,21 @@
-from functools import wraps
-from typing import Any, Callable, Optional, Dict, Union
-from fastapi import HTTPException, status
-from datetime import datetime
-from app.core.schemas import ApiResponse, ErrorResponse, ErrorCode
-from app.core.logging import api_logger
 import traceback
+from collections.abc import Callable
+from datetime import datetime
+from functools import wraps
+from typing import Any
+
+from fastapi import HTTPException, status
+
+from app.core.logging import api_logger
+from app.core.schemas import ApiResponse, ErrorCode, ErrorResponse
 
 
 def handle_response(
-    success_message: Optional[str] = None,
-    error_code: Optional[str] = None,
+    success_message: str | None = None,
+    error_code: str | None = None,
     include_data: bool = True,
-    cache_key: Optional[str] = None,
-    cache_timeout: Optional[int] = None
+    cache_key: str | None = None,
+    cache_timeout: int | None = None
 ):
     """
     统一响应格式装饰器
@@ -30,25 +33,25 @@ def handle_response(
             try:
                 # 执行原函数
                 result = await func(*args, **kwargs)
-                
+
                 # 处理响应
                 if include_data:
                     response_data = {"data": result}
                 else:
                     response_data = {}
-                
+
                 if success_message:
                     response_data["message"] = success_message
-                
+
                 response = ApiResponse(**response_data)
                 api_logger.info(f"API success: {func.__name__}", extra={
                     "function": func.__name__,
                     "args": str(args),
                     "kwargs": str(kwargs)
                 })
-                
+
                 return response
-                
+
             except HTTPException as e:
                 # 处理HTTP异常
                 error_response = ErrorResponse(
@@ -65,7 +68,7 @@ def handle_response(
                     status_code=e.status_code,
                     detail=error_response.model_dump()
                 )
-                
+
             except ValueError as e:
                 # 处理值错误
                 error_response = ErrorResponse(
@@ -81,7 +84,7 @@ def handle_response(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=error_response.model_dump()
                 )
-                
+
             except Exception as e:
                 # 处理其他异常
                 error_response = ErrorResponse(
@@ -104,12 +107,12 @@ def handle_response(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=error_response.model_dump()
                 )
-        
+
         return wrapper
     return decorator
 
 
-def handle_exceptions(error_code: Optional[str] = None):
+def handle_exceptions(error_code: str | None = None):
     """
     异常处理装饰器
     
@@ -154,20 +157,20 @@ def handle_exceptions(error_code: Optional[str] = None):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=error_response.model_dump()
                 )
-        
+
         return wrapper
     return decorator
 
 
 class ResponseHandler:
     """响应处理器"""
-    
+
     @staticmethod
     def success(
         data: Any = None,
-        message: Optional[str] = None,
+        message: str | None = None,
         status_code: int = status.HTTP_200_OK
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """成功响应"""
         response = {
             "data": data,
@@ -176,14 +179,14 @@ class ResponseHandler:
             "timestamp": datetime.utcnow()
         }
         return response, status_code
-    
+
     @staticmethod
     def error(
         error: str,
         message: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """错误响应"""
         response = ErrorResponse(
             error=error,
@@ -191,12 +194,12 @@ class ResponseHandler:
             details=details
         )
         return response.model_dump(), status_code
-    
+
     @staticmethod
     def validation_error(
         message: str,
-        details: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        details: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """验证错误响应"""
         return ResponseHandler.error(
             error=ErrorCode.VALIDATION_ERROR,
@@ -204,12 +207,12 @@ class ResponseHandler:
             details=details,
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
         )
-    
+
     @staticmethod
     def not_found(
         message: str = "Resource not found",
-        details: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        details: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """未找到响应"""
         return ResponseHandler.error(
             error=ErrorCode.NOT_FOUND,
@@ -217,12 +220,12 @@ class ResponseHandler:
             details=details,
             status_code=status.HTTP_404_NOT_FOUND
         )
-    
+
     @staticmethod
     def unauthorized(
         message: str = "Unauthorized",
-        details: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        details: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """未授权响应"""
         return ResponseHandler.error(
             error=ErrorCode.AUTHENTICATION_ERROR,
@@ -230,12 +233,12 @@ class ResponseHandler:
             details=details,
             status_code=status.HTTP_401_UNAUTHORIZED
         )
-    
+
     @staticmethod
     def forbidden(
         message: str = "Forbidden",
-        details: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        details: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """禁止访问响应"""
         return ResponseHandler.error(
             error=ErrorCode.AUTHORIZATION_ERROR,
