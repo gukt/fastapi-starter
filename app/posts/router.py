@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_active_user
 from app.auth.models import User
-from app.core.decorators import handle_exceptions, handle_response
+from app.core.decorators import handle_response
 from app.database.session import get_db
 from app.posts.exceptions import AccessDeniedError, PostNotFoundError
 from app.posts.schemas import PostCreate, PostResponse, PostUpdate
@@ -19,7 +19,6 @@ router = APIRouter(prefix="/posts", tags=["文章"])
 
 @router.post("/", response_model=dict, summary="创建文章")
 @handle_response("文章创建成功")
-@handle_exceptions()
 async def create_post(
     post_data: PostCreate,
     current_user: User = Depends(get_current_active_user),
@@ -32,7 +31,6 @@ async def create_post(
 
 @router.get("/", response_model=dict, summary="获取文章列表1")
 @handle_response()
-@handle_exceptions()
 async def get_posts(
     params: QueryParams = Depends(),
     search: str | None = Query(None, description="搜索标题或内容"),
@@ -71,7 +69,6 @@ async def get_posts(
 
 @router.get("/{post_id}", response_model=dict, summary="获取文章详情")
 @handle_response()
-@handle_exceptions()
 async def get_post(
     post_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -91,7 +88,6 @@ async def get_post(
 
 @router.put("/{post_id}", response_model=dict, summary="更新文章")
 @handle_response("文章更新成功")
-@handle_exceptions()
 async def update_post(
     post_id: UUID,
     post_data: PostUpdate,
@@ -105,7 +101,6 @@ async def update_post(
 
 @router.delete("/{post_id}", response_model=dict, summary="删除文章")
 @handle_response("文章删除成功")
-@handle_exceptions()
 async def delete_post(
     post_id: UUID,
     current_user: User = Depends(get_current_active_user),
@@ -118,7 +113,6 @@ async def delete_post(
 
 @router.get("/my/posts", response_model=dict, summary="获取我的文章")
 @handle_response()
-@handle_exceptions()
 async def get_my_posts(
     params: QueryParams = Depends(),
     search: str | None = Query(None, description="搜索标题或内容"),

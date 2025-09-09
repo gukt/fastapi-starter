@@ -1,18 +1,7 @@
-import uuid
-
 from sqlalchemy import Column, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
-from app.database.session import Base
-from app.models.mixins import ActiveMixin, SoftDeleteModel, AuditableModel
-
-
-class BaseModel(ActiveMixin, SoftDeleteModel, AuditableModel, Base):
-    """基础模型类 - 包含所有通用功能"""
-
-    __abstract__ = True
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+from app.models.base import BaseModel
 
 
 class AuditLog(BaseModel):

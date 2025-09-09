@@ -2,11 +2,12 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Tex
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from app.models.models import BaseModel
+from app.models import AuditableModel, BaseModel, SoftDeletableModel
 
 
-class Post(BaseModel):
+class Post(SoftDeletableModel, AuditableModel, BaseModel):
     """文章模型"""
+
     __tablename__ = "posts"
 
     title = Column(String(200), nullable=False, index=True)
@@ -28,6 +29,7 @@ class Post(BaseModel):
 
 class Tag(BaseModel):
     """标签模型"""
+
     __tablename__ = "tags"
 
     name = Column(String(50), unique=True, nullable=False, index=True)
@@ -40,12 +42,11 @@ class Tag(BaseModel):
 
 class PostTag(BaseModel):
     """文章标签关联模型"""
+
     __tablename__ = "post_tags"
 
     post_id = Column(UUID(as_uuid=True), ForeignKey("posts.id"), nullable=False)
     tag_id = Column(UUID(as_uuid=True), ForeignKey("tags.id"), nullable=False)
 
     # 复合索引
-    __table_args__ = (
-        Index("ix_post_tags_post_tag", "post_id", "tag_id", unique=True),
-    )
+    __table_args__ = (Index("ix_post_tags_post_tag", "post_id", "tag_id", unique=True),)

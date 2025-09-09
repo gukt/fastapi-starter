@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 from app.auth.router import router as auth_router
 from app.posts.router import router as posts_router

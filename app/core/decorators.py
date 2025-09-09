@@ -18,11 +18,11 @@ def handle_response(
     error_code: str | None = None,
     include_data: bool = True,
     cache_key: str | None = None,
-    cache_timeout: int | None = None
+    cache_timeout: int | None = None,
 ):
     """
     统一响应格式装饰器
-    
+
     Args:
         success_message: 成功时的消息
         error_code: 错误代码
@@ -30,6 +30,7 @@ def handle_response(
         cache_key: 缓存键
         cache_timeout: 缓存超时时间
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -47,11 +48,14 @@ def handle_response(
                     response_data["message"] = success_message
 
                 response = ApiResponse(**response_data)
-                api_logger.info(f"API success: {func.__name__}", extra={
-                    "function": func.__name__,
-                    "args": str(args),
-                    "kwargs": str(kwargs)
-                })
+                api_logger.info(
+                    f"API success: {func.__name__}",
+                    extra={
+                        "function": func.__name__,
+                        "args": str(args),
+                        "kwargs": str(kwargs),
+                    },
+                )
 
                 return response
 
@@ -60,16 +64,18 @@ def handle_response(
                 error_response = ErrorResponse(
                     error=error_code or ErrorCode.BAD_REQUEST,
                     message=e.detail,
-                    details={"status_code": e.status_code}
+                    details={"status_code": e.status_code},
                 )
-                api_logger.warning(f"HTTP Exception: {func.__name__} - {e.detail}", extra={
-                    "function": func.__name__,
-                    "status_code": e.status_code,
-                    "detail": e.detail
-                })
+                api_logger.warning(
+                    f"HTTP Exception: {func.__name__} - {e.detail}",
+                    extra={
+                        "function": func.__name__,
+                        "status_code": e.status_code,
+                        "detail": e.detail,
+                    },
+                )
                 raise HTTPException(
-                    status_code=e.status_code,
-                    detail=error_response.model_dump()
+                    status_code=e.status_code, detail=error_response.model_dump()
                 )
 
             except ValueError as e:
@@ -77,15 +83,15 @@ def handle_response(
                 error_response = ErrorResponse(
                     error=ErrorCode.VALIDATION_ERROR,
                     message=str(e),
-                    details={"function": func.__name__}
+                    details={"function": func.__name__},
                 )
-                api_logger.warning(f"Validation error: {func.__name__} - {str(e)}", extra={
-                    "function": func.__name__,
-                    "error": str(e)
-                })
+                api_logger.warning(
+                    f"Validation error: {func.__name__} - {str(e)}",
+                    extra={"function": func.__name__, "error": str(e)},
+                )
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=error_response.model_dump()
+                    detail=error_response.model_dump(),
                 )
 
             except Exception as e:
@@ -97,31 +103,35 @@ def handle_response(
                         "function": func.__name__,
                         "error_type": type(e).__name__,
                         "error_message": str(e),
-                        "traceback": traceback.format_exc() if not error_code else None
-                    }
+                        "traceback": traceback.format_exc() if not error_code else None,
+                    },
                 )
-                api_logger.error(f"Internal error: {func.__name__} - {str(e)}", extra={
-                    "function": func.__name__,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "traceback": traceback.format_exc()
-                })
+                api_logger.error(
+                    f"Internal error: {func.__name__} - {str(e)}",
+                    extra={
+                        "function": func.__name__,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "traceback": traceback.format_exc(),
+                    },
+                )
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=error_response.model_dump()
+                    detail=error_response.model_dump(),
                 )
 
         return wrapper
+
     return decorator
 
 
 def handle_exceptions(error_code: str | None = None):
-    """
-    异常处理装饰器
-    
+    """异常处理装饰器
+
     Args:
         error_code: 错误代码
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -133,11 +143,11 @@ def handle_exceptions(error_code: str | None = None):
                 error_response = ErrorResponse(
                     error=error_code or ErrorCode.VALIDATION_ERROR,
                     message=str(e),
-                    details={"function": func.__name__}
+                    details={"function": func.__name__},
                 )
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=error_response.model_dump()
+                    detail=error_response.model_dump(),
                 )
             except Exception as e:
                 error_response = ErrorResponse(
@@ -147,21 +157,25 @@ def handle_exceptions(error_code: str | None = None):
                         "function": func.__name__,
                         "error_type": type(e).__name__,
                         "error_message": str(e),
-                        "traceback": traceback.format_exc()
-                    }
+                        "traceback": traceback.format_exc(),
+                    },
                 )
-                api_logger.error(f"Internal error: {func.__name__} - {str(e)}", extra={
-                    "function": func.__name__,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "traceback": traceback.format_exc()
-                })
+                api_logger.error(
+                    f"Internal error: {func.__name__} - {str(e)}",
+                    extra={
+                        "function": func.__name__,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "traceback": traceback.format_exc(),
+                    },
+                )
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=error_response.model_dump()
+                    detail=error_response.model_dump(),
                 )
 
         return wrapper
+
     return decorator
 
 
@@ -172,14 +186,14 @@ class ResponseHandler:
     def success(
         data: Any = None,
         message: str | None = None,
-        status_code: int = status.HTTP_200_OK
+        status_code: int = status.HTTP_200_OK,
     ) -> dict[str, Any]:
         """成功响应"""
         response = {
             "data": data,
             "success": True,
             "message": message,
-            "timestamp": datetime.now(timezone.UTC)
+            "timestamp": datetime.now(timezone.UTC),
         }
         return response, status_code
 
@@ -188,64 +202,56 @@ class ResponseHandler:
         error: str,
         message: str,
         details: dict[str, Any] | None = None,
-        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+        status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
     ) -> dict[str, Any]:
         """错误响应"""
-        response = ErrorResponse(
-            error=error,
-            message=message,
-            details=details
-        )
+        response = ErrorResponse(error=error, message=message, details=details)
         return response.model_dump(), status_code
 
     @staticmethod
     def validation_error(
-        message: str,
-        details: dict[str, Any] | None = None
+        message: str, details: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """验证错误响应"""
         return ResponseHandler.error(
             error=ErrorCode.VALIDATION_ERROR,
             message=message,
             details=details,
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
     @staticmethod
     def not_found(
-        message: str = "Resource not found",
-        details: dict[str, Any] | None = None
+        message: str = "Resource not found", details: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """未找到响应"""
         return ResponseHandler.error(
             error=ErrorCode.NOT_FOUND,
             message=message,
             details=details,
-            status_code=status.HTTP_404_NOT_FOUND
+            status_code=status.HTTP_404_NOT_FOUND,
         )
 
     @staticmethod
     def unauthorized(
-        message: str = "Unauthorized",
-        details: dict[str, Any] | None = None
+        message: str = "Unauthorized", details: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """未授权响应"""
         return ResponseHandler.error(
             error=ErrorCode.AUTHENTICATION_ERROR,
             message=message,
             details=details,
-            status_code=status.HTTP_401_UNAUTHORIZED
+            status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
     @staticmethod
     def forbidden(
-        message: str = "Forbidden",
-        details: dict[str, Any] | None = None
+        message: str = "Forbidden", details: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """禁止访问响应"""
         return ResponseHandler.error(
             error=ErrorCode.AUTHORIZATION_ERROR,
             message=message,
             details=details,
-            status_code=status.HTTP_403_FORBIDDEN
+            status_code=status.HTTP_403_FORBIDDEN,
         )

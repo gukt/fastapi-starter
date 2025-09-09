@@ -2,15 +2,12 @@ import logging
 import time
 
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1 import api_router
 from app.core.config import settings
+from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
-from app.core.schemas import ErrorCode, ErrorResponse
 
 # 设置日志
 setup_logging()
@@ -35,6 +32,12 @@ app.add_middleware(
     allow_methods=settings.cors.allowed_methods,
     allow_headers=settings.cors.allowed_headers,
 )
+
+# 注册全局异常处理器
+register_exception_handlers(app)
+
+# 包含 API 路由
+app.include_router(api_router, prefix="/api/v1")
 
 
 # 请求日志中间件
@@ -70,65 +73,6 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# 全局异常处理
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    logger.warning(
-        f"HTTP Exception: {exc.status_code} - {exc.detail}",
-        extra={
-            "status_code": exc.status_code,
-            "detail": exc.detail,
-            "url": str(request.url),
-        },
-    )
-
-    error_response = ErrorResponse(
-        error=ErrorCode.BAD_REQUEST,
-        message=exc.detail,
-        details={"status_code": exc.status_code},
-    )
-
-    return JSONResponse(
-        status_code=exc.status_code, content=error_response.model_dump(mode="json")
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logger.warning(
-        f"Validation Error: {exc.errors()}",
-        extra={"errors": exc.errors(), "url": str(request.url)},
-    )
-
-    error_response = ErrorResponse(
-        error=ErrorCode.VALIDATION_ERROR,
-        message="Validation error",
-        details={"errors": exc.errors()},
-    )
-
-    return JSONResponse(status_code=422, content=error_response.model_dump())
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    logger.error(
-        f"Unhandled Exception: {str(exc)}",
-        extra={
-            "exception_type": type(exc).__name__,
-            "exception_message": str(exc),
-            "url": str(request.url),
-        },
-    )
-
-    error_response = ErrorResponse(
-        error=ErrorCode.INTERNAL_ERROR,
-        message="Internal server error",
-        details={"exception_type": type(exc).__name__},
-    )
-
-    return JSONResponse(status_code=500, content=error_response.model_dump())
-
-
 # 健康检查端点
 @app.get("/health", summary="健康检查")
 async def health_check():
@@ -138,10 +82,6 @@ async def health_check():
         "service": settings.app_name,
         "version": settings.app_version,
     }
-
-
-# 包含 API 路由
-app.include_router(api_router, prefix="/api/v1")
 
 
 # 根路径

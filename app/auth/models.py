@@ -1,11 +1,12 @@
 from sqlalchemy import Boolean, Column, DateTime, String
 from sqlalchemy.orm import relationship
 
-from app.models.models import BaseModel
+from app.models import BaseModel
 
 
 class User(BaseModel):
     """用户模型"""
+
     __tablename__ = "users"
 
     email = Column(String(255), unique=True, nullable=False, index=True)

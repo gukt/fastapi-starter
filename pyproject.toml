@@ -85,8 +85,8 @@ fix = true
 [tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
     "F",      # pyflakes
+    "W",      # pycodestyle warnings
     "I",      # isort
     "B",      # flake8-bugbear
     "C4",     # flake8-comprehensions
