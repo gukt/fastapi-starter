@@ -1,13 +1,16 @@
 import traceback
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.core.logging import api_logger
+from app.core.logging import get_logger
 from app.core.schemas import ApiResponse, ErrorCode, ErrorResponse
+
+# API 日志器
+api_logger = get_logger("api")
 
 
 def handle_response(
@@ -176,7 +179,7 @@ class ResponseHandler:
             "data": data,
             "success": True,
             "message": message,
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.UTC)
         }
         return response, status_code
 

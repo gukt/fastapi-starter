@@ -1,6 +1,7 @@
 """Auth 模块的服务层"""
 
-from datetime import datetime, timedelta
+import logging
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from jose import JWTError, jwt
@@ -11,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.auth.schemas import TokenData
 from app.core.config import settings
-from app.core.logging import auth_logger
 
-# 密码上下文
+logger = logging.getLogger("auth")
+security_settings = settings.security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -35,63 +36,73 @@ class AuthService:
         """创建访问令牌"""
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(UTC) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+            expire = datetime.now(UTC) + timedelta(
+                minutes=security_settings.access_token_expire_minutes
+            )
 
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+        encoded_jwt = jwt.encode(
+            to_encode,
+            security_settings.secret_key,
+            algorithm=security_settings.algorithm,
+        )
 
-        auth_logger.info(f"Access token created for user: {data.get('sub')}")
+        logger.info(f"Access token created for user: {data.get('sub')}")
         return encoded_jwt
 
     @staticmethod
     def verify_token(token: str) -> TokenData | None:
         """验证令牌"""
         try:
-            payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+            payload = jwt.decode(
+                token,
+                security_settings.secret_key,
+                algorithms=[security_settings.algorithm],
+            )
             user_id: str = payload.get("sub")
             username: str = payload.get("username")
 
             if user_id is None or username is None:
-                auth_logger.warning("Token missing required fields")
+                logger.warning("Token missing required fields")
                 return None
 
             return TokenData(user_id=UUID(user_id), username=username)
 
         except JWTError as e:
-            auth_logger.warning(f"JWT verification failed: {e}")
+            logger.warning(f"JWT verification failed: {e}")
             return None
         except Exception as e:
-            auth_logger.error(f"Token verification error: {e}")
+            logger.error(f"Token verification error: {e}")
             return None
 
     @staticmethod
     async def authenticate_user(
-        db: AsyncSession,
-        email: str,
-        password: str
+        db: AsyncSession, email: str, password: str
     ) -> User | None:
         """验证用户"""
         try:
-            result = await db.execute(select(User).where(User.email == email, User.is_active == True))
+            result = await db.execute(
+                select(User).where(User.email == email, User.is_active is True)
+            )
             user = result.scalar_one_or_none()
 
             if not user:
-                auth_logger.warning(f"User not found: {email}")
+                logger.warning(f"User not found: {email}")
                 return None
 
             if not AuthService.verify_password(password, user.hashed_password):
-                auth_logger.warning(f"Invalid password for user: {email}")
+                logger.warning(f"Invalid password for user: {email}")
                 return None
 
             # 更新最后登录时间
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(UTC)
             await db.commit()
 
-            auth_logger.info(f"User authenticated successfully: {email}")
+            logger.info(f"User authenticated successfully: {email}")
             return user
 
         except Exception as e:
-            auth_logger.error(f"Authentication error: {e}")
+            logger.error(f"Authentication error: {e}")
             return None

@@ -85,11 +85,3 @@ def setup_logging():
 def get_logger(name: str):
     """获取指定名称的日志器"""
     return logger.bind(name=name)
-
-
-# 应用日志器
-app_logger = get_logger("app")
-api_logger = get_logger("api")
-db_logger = get_logger("database")
-auth_logger = get_logger("auth")
-cache_logger = get_logger("cache")

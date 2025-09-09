@@ -23,14 +23,14 @@ router = APIRouter(prefix="/posts", tags=["文章"])
 async def create_post(
     post_data: PostCreate,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """创建文章"""
     post = await PostService.create_post(db, post_data, current_user)
     return PostResponse.model_validate(post)
 
 
-@router.get("/", response_model=dict, summary="获取文章列表")
+@router.get("/", response_model=dict, summary="获取文章列表1")
 @handle_response()
 @handle_exceptions()
 async def get_posts(
@@ -39,7 +39,7 @@ async def get_posts(
     is_published: bool | None = Query(None, description="是否发布"),
     author_id: UUID | None = Query(None, description="作者 ID"),
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取文章列表"""
     result = await PostService.get_posts(
@@ -50,7 +50,7 @@ async def get_posts(
         is_published=is_published,
         author_id=author_id,
         sort_by=params.sort_by or "created_at",
-        sort_order=params.sort_order
+        sort_order=params.sort_order,
     )
 
     # 如果不是超级用户，过滤掉未发布的非自己文章
@@ -65,7 +65,7 @@ async def get_posts(
 
     return {
         "items": [PostResponse.model_validate(post) for post in result["items"]],
-        "meta": result["meta"]
+        "meta": result["meta"],
     }
 
 
@@ -75,7 +75,7 @@ async def get_posts(
 async def get_post(
     post_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取文章详情"""
     post = await PostService.get_post_by_id(db, post_id)
@@ -96,7 +96,7 @@ async def update_post(
     post_id: UUID,
     post_data: PostUpdate,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """更新文章"""
     post = await PostService.update_post(db, post_id, post_data, current_user)
@@ -109,7 +109,7 @@ async def update_post(
 async def delete_post(
     post_id: UUID,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """删除文章"""
     await PostService.delete_post(db, post_id, current_user)
@@ -124,7 +124,7 @@ async def get_my_posts(
     search: str | None = Query(None, description="搜索标题或内容"),
     is_published: bool | None = Query(None, description="是否发布"),
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取我的文章"""
     result = await PostService.get_user_posts(
@@ -135,10 +135,10 @@ async def get_my_posts(
         search=search,
         is_published=is_published,
         sort_by=params.sort_by or "created_at",
-        sort_order=params.sort_order
+        sort_order=params.sort_order,
     )
 
     return {
         "items": [PostResponse.model_validate(post) for post in result["items"]],
-        "meta": result["meta"]
+        "meta": result["meta"],
     }

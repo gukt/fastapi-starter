@@ -53,7 +53,9 @@ async def get_current_active_user(
     return current_user
 
 
-async def get_current_superuser(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_superuser(
+    current_user: User = Depends(get_current_user),
+) -> User:
     """获取当前超级用户"""
     if not current_user.is_superuser:
         raise HTTPException(

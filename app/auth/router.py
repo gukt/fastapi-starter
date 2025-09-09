@@ -11,10 +11,11 @@ from app.auth.models import User
 from app.auth.schemas import UserCreate, UserLogin, UserResponse, UserUpdate
 from app.auth.service import AuthService
 from app.core.decorators import handle_exceptions, handle_response
-from app.core.logging import api_logger
+from app.core.logging import get_logger
 from app.database.session import get_db
 from app.utils.pagination import QueryParams, get_paginated_results
 
+logger = get_logger("api")
 router = APIRouter(prefix="/auth", tags=["认证"])
 
 
@@ -48,7 +49,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(db_user)
 
-    api_logger.info(f"New user registered: {user_data.email}")
+    logger.info(f"New user registered: {user_data.email}")
     return UserResponse.model_validate(db_user)
 
 
@@ -122,7 +123,7 @@ async def update_current_user(
     await db.commit()
     await db.refresh(current_user)
 
-    api_logger.info(f"User updated: {current_user.email}")
+    logger.info(f"User updated: {current_user.email}")
     return UserResponse.model_validate(current_user)
 
 

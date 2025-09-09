@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -8,16 +8,14 @@ from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
+from app.auth.schemas import TokenData
 from app.core.config import settings
-from app.core.logging import auth_logger
+from app.core.logging import get_logger
 from app.database.session import get_db
-from app.models.models import User
-from app.models.schemas import TokenData
 
-# 密码上下文
+logger = get_logger("auth")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# JWT Bearer token
 security = HTTPBearer()
 
 
@@ -39,71 +37,77 @@ class AuthService:
         """创建访问令牌"""
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(timezone.UTC) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+            expire = datetime.now(timezone.UTC) + timedelta(
+                minutes=settings.access_token_expire_minutes
+            )
 
         to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+        encoded_jwt = jwt.encode(
+            to_encode, settings.secret_key, algorithm=settings.algorithm
+        )
 
-        auth_logger.info(f"Access token created for user: {data.get('sub')}")
+        logger.info(f"Access token created for user: {data.get('sub')}")
         return encoded_jwt
 
     @staticmethod
     def verify_token(token: str) -> TokenData | None:
         """验证令牌"""
         try:
-            payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+            payload = jwt.decode(
+                token, settings.secret_key, algorithms=[settings.algorithm]
+            )
             user_id: str = payload.get("sub")
             username: str = payload.get("username")
 
             if user_id is None or username is None:
-                auth_logger.warning("Token missing required fields")
+                logger.warning("Token missing required fields")
                 return None
 
             return TokenData(user_id=UUID(user_id), username=username)
 
         except JWTError as e:
-            auth_logger.warning(f"JWT verification failed: {e}")
+            logger.warning(f"JWT verification failed: {e}")
             return None
         except Exception as e:
-            auth_logger.error(f"Token verification error: {e}")
+            logger.error(f"Token verification error: {e}")
             return None
 
     @staticmethod
     async def authenticate_user(
-        db: AsyncSession,
-        email: str,
-        password: str
+        db: AsyncSession, email: str, password: str
     ) -> User | None:
         """验证用户"""
         try:
-            result = await db.execute(select(User).where(User.email == email, User.is_active == True))
+            result = await db.execute(
+                select(User).where(User.email == email, User.is_active)
+            )
             user = result.scalar_one_or_none()
 
             if not user:
-                auth_logger.warning(f"User not found: {email}")
+                logger.warning(f"User not found: {email}")
                 return None
 
             if not AuthService.verify_password(password, user.hashed_password):
-                auth_logger.warning(f"Invalid password for user: {email}")
+                logger.warning(f"Invalid password for user: {email}")
                 return None
 
             # 更新最后登录时间
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(timezone.UTC)
             await db.commit()
 
-            auth_logger.info(f"User authenticated successfully: {email}")
+            logger.info(f"User authenticated successfully: {email}")
             return user
 
         except Exception as e:
-            auth_logger.error(f"Authentication error: {e}")
+            logger.error(f"Authentication error: {e}")
             return None
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """获取当前用户"""
     credentials_exception = HTTPException(
@@ -119,21 +123,25 @@ async def get_current_user(
             raise credentials_exception
 
         # 查询用户
-        result = await db.execute(select(User).where(User.id == token_data.user_id, User.is_active == True))
+        result = await db.execute(
+            select(User).where(User.id == token_data.user_id, User.is_active is True)
+        )
         user = result.scalar_one_or_none()
 
         if user is None:
-            auth_logger.warning(f"User not found for token: {token_data.user_id}")
+            logger.warning(f"User not found for token: {token_data.user_id}")
             raise credentials_exception
 
         return user
 
     except Exception as e:
-        auth_logger.error(f"Get current user error: {e}")
+        logger.error(f"Get current user error: {e}")
         raise credentials_exception
 
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
     """获取当前活跃用户"""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
@@ -145,7 +153,7 @@ async def get_current_superuser(current_user: User = Depends(get_current_user)) 
     if not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="The user doesn't have enough privileges"
+            detail="The user doesn't have enough privileges",
         )
     return current_user
 
@@ -161,8 +169,7 @@ class PermissionChecker:
         # 目前简单检查是否为超级用户
         if not current_user.is_superuser and self.required_permissions:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions"
+                status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
             )
         return current_user
 

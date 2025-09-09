@@ -165,10 +165,7 @@ fastapi-starter/
 
 ```json
 {
-    "data": "响应数据",
-    "success": true,
-    "message": "操作成功",
-    "timestamp": "2024-01-01T00:00:00Z"
+    "data": "响应数据"
 }
 ```
 
@@ -180,8 +177,7 @@ fastapi-starter/
   "message": "错误描述",
   "details": {
     "详细错误信息"
-  },
-  "timestamp": "2024-01-01T00:00:00Z"
+  }
 }
 ```
 

@@ -1,3 +1,4 @@
+import logging
 import time
 
 from fastapi import FastAPI, Request
@@ -8,16 +9,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1 import api_router
 from app.core.config import settings
-from app.core.logging import app_logger, setup_logging
+from app.core.logging import setup_logging
 from app.core.schemas import ErrorCode, ErrorResponse
 
 # 设置日志
 setup_logging()
+logger = logging.getLogger("app")
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
+    title=settings.app.app_name,
+    version=settings.app.app_version,
     description="A FastAPI starter template for API projects",
     openapi_url="/api/v1/openapi.json",
     docs_url="/api/v1/docs",
@@ -28,10 +30,10 @@ app = FastAPI(
 # 添加 CORS 中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_hosts,
+    allow_origins=settings.cors.allowed_hosts,
     allow_credentials=True,
-    allow_methods=settings.allowed_methods,
-    allow_headers=settings.allowed_headers,
+    allow_methods=settings.cors.allowed_methods,
+    allow_headers=settings.cors.allowed_headers,
 )
 
 
@@ -41,7 +43,7 @@ async def log_requests(request: Request, call_next):
     start_time = time.time()
 
     # 记录请求信息
-    app_logger.info(
+    logger.info(
         f"Request started: {request.method} {request.url}",
         extra={
             "method": request.method,
@@ -55,7 +57,7 @@ async def log_requests(request: Request, call_next):
 
     # 记录响应信息
     process_time = time.time() - start_time
-    app_logger.info(
+    logger.info(
         f"Request completed: {request.method} {request.url}",
         extra={
             "method": request.method,
@@ -71,7 +73,7 @@ async def log_requests(request: Request, call_next):
 # 全局异常处理
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    app_logger.warning(
+    logger.warning(
         f"HTTP Exception: {exc.status_code} - {exc.detail}",
         extra={
             "status_code": exc.status_code,
@@ -87,13 +89,13 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     )
 
     return JSONResponse(
-        status_code=exc.status_code, content=error_response.model_dump()
+        status_code=exc.status_code, content=error_response.model_dump(mode="json")
     )
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    app_logger.warning(
+    logger.warning(
         f"Validation Error: {exc.errors()}",
         extra={"errors": exc.errors(), "url": str(request.url)},
     )
@@ -109,7 +111,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    app_logger.error(
+    logger.error(
         f"Unhandled Exception: {str(exc)}",
         extra={
             "exception_type": type(exc).__name__,

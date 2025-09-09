@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # 创建异步数据库引擎
 engine = create_async_engine(
-    settings.database_url,
+    settings.database.database_url,
     echo=settings.debug,
     future=True,
     pool_size=20,

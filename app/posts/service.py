@@ -1,13 +1,13 @@
 """Posts 模块的服务层"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
-from app.core.logging import api_logger
+from app.core.logging import get_logger
 from app.posts.exceptions import (
     NotAuthorError,
     PostNotFoundError,
@@ -16,15 +16,15 @@ from app.posts.exceptions import (
 from app.posts.models import Post
 from app.posts.schemas import PostCreate, PostUpdate
 
+logger = get_logger("api")
+
 
 class PostService:
     """文章服务"""
 
     @staticmethod
     async def create_post(
-        db: AsyncSession,
-        post_data: PostCreate,
-        author: User
+        db: AsyncSession, post_data: PostCreate, author: User
     ) -> Post:
         """创建文章"""
         # 检查 slug 是否已存在
@@ -39,17 +39,17 @@ class PostService:
             slug=post_data.slug,
             summary=post_data.summary,
             is_published=post_data.is_published,
-            author_id=author.id
+            author_id=author.id,
         )
 
         if post_data.is_published:
-            db_post.published_at = datetime.utcnow()
+            db_post.published_at = datetime.now(timezone.UTC)
 
         db.add(db_post)
         await db.commit()
         await db.refresh(db_post)
 
-        api_logger.info(f"New post created: {post_data.title} by {author.username}")
+        logger.info(f"New post created: {post_data.title} by {author.username}")
         return db_post
 
     @staticmethod
@@ -73,7 +73,7 @@ class PostService:
         is_published: bool | None = None,
         author_id: UUID | None = None,
         sort_by: str = "created_at",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
     ) -> dict:
         """获取文章列表"""
         from app.utils.pagination import get_paginated_results
@@ -93,17 +93,14 @@ class PostService:
             sort_order=sort_order,
             search_term=search,
             search_fields=["title", "content", "summary"],
-            filters=filters
+            filters=filters,
         )
 
         return result
 
     @staticmethod
     async def update_post(
-        db: AsyncSession,
-        post_id: UUID,
-        post_data: PostUpdate,
-        current_user: User
+        db: AsyncSession, post_id: UUID, post_data: PostUpdate, current_user: User
     ) -> Post:
         """更新文章"""
         post = await PostService.get_post_by_id(db, post_id)
@@ -117,10 +114,7 @@ class PostService:
         # 检查 slug 是否已被其他文章使用
         if post_data.slug and post_data.slug != post.slug:
             slug_result = await db.execute(
-                select(Post).where(
-                    Post.slug == post_data.slug,
-                    Post.id != post_id
-                )
+                select(Post).where(Post.slug == post_data.slug, Post.id != post_id)
             )
             if slug_result.scalar_one_or_none():
                 raise SlugAlreadyExistsError("Slug already exists")
@@ -133,22 +127,18 @@ class PostService:
         # 如果发布状态改变，更新发布时间
         if "is_published" in update_data:
             if post.is_published and not post.published_at:
-                post.published_at = datetime.utcnow()
+                post.published_at = datetime.now(timezone.UTC)
             elif not post.is_published:
                 post.published_at = None
 
         await db.commit()
         await db.refresh(post)
 
-        api_logger.info(f"Post updated: {post.title} by {current_user.username}")
+        logger.info(f"Post updated: {post.title} by {current_user.username}")
         return post
 
     @staticmethod
-    async def delete_post(
-        db: AsyncSession,
-        post_id: UUID,
-        current_user: User
-    ) -> bool:
+    async def delete_post(db: AsyncSession, post_id: UUID, current_user: User) -> bool:
         """删除文章"""
         post = await PostService.get_post_by_id(db, post_id)
         if not post:
@@ -161,14 +151,11 @@ class PostService:
         await db.delete(post)
         await db.commit()
 
-        api_logger.info(f"Post deleted: {post.title} by {current_user.username}")
+        logger.info(f"Post deleted: {post.title} by {current_user.username}")
         return True
 
     @staticmethod
-    async def check_post_access(
-        post: Post,
-        current_user: User
-    ) -> bool:
+    async def check_post_access(post: Post, current_user: User) -> bool:
         """检查文章访问权限"""
         # 如果文章已发布，任何人都可以访问
         if post.is_published:
@@ -189,7 +176,7 @@ class PostService:
         search: str | None = None,
         is_published: bool | None = None,
         sort_by: str = "created_at",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
     ) -> dict:
         """获取用户的文章列表"""
         return await PostService.get_posts(
@@ -200,5 +187,5 @@ class PostService:
             is_published=is_published,
             author_id=user_id,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
         )
