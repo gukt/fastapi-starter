@@ -53,7 +53,7 @@ def handle_response(
                 return response
 
             except HTTPException as e:
-                # 处理HTTP异常
+                # 处理 HTTP 异常
                 error_response = ErrorResponse(
                     error=error_code or ErrorCode.BAD_REQUEST,
                     message=e.detail,

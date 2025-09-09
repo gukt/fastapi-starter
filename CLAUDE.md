@@ -75,14 +75,14 @@ uv run python -c "from app.database.session import create_tables; import asyncio
 
 ```python
 # Basic authentication
-from app.core.auth import get_current_active_user
+from app.auth.dependencies import get_current_active_user
 current_user: User = Depends(get_current_active_user)
 
 # Admin-only endpoints
-from app.core.auth import get_current_superuser
+from app.auth.dependencies import get_current_superuser
 admin_user: User = Depends(get_current_superuser)
 
-# JWT token handling in @app/core/auth.py
+# JWT token handling in @app/auth/service.py
 ```
 
 ### Database Operations
@@ -96,6 +96,10 @@ db: AsyncSession = Depends(get_db)
 from app.models.models import BaseModel
 class MyModel(BaseModel):
     # UUID primary key, timestamps, and soft delete included
+
+# Domain-specific models
+from app.auth.models import User
+from app.posts.models import Post
 ```
 
 ### Pagination
@@ -116,35 +120,57 @@ result = await get_paginated_results(
 
 ### API Structure
 
--   Routes organized by version in @app/api/v1/
--   Each feature has its own router file (auth.py, posts.py, etc.)
--   All routers registered in @app/api/v1/**init**.py
--   Automatic OpenAPI documentation generation
+-   **Simplified Domain-Driven Design**: Each domain is a flat module with 7 core files
+-   **Clear separation**: Models, schemas, service, router, dependencies, constants, exceptions
+-   **Unified routing**: All routers registered in @app/api/v1/__init__.py
+-   **Automatic documentation**: OpenAPI/Swagger docs generated automatically
+-   **Consistent patterns**: Same structure across all domains for maintainability
 
 ## File Structure (Developer View)
 
 ```
 app/
-├── api/v1/               # API routers
-│   ├── auth.py           # Authentication endpoints
-│   ├── posts.py          # Post management endpoints
-│   └── __init__.py       # Router registration
-├── core/                 # Core infrastructure
-│   ├── auth.py           # JWT authentication
-│   ├── config.py         # Settings management
-│   ├── decorators.py     # Response decorators
-│   ├── logging.py        # Loguru logging setup
-│   ├── redis.py          # Redis cache management
-│   └── schemas.py        # Base response schemas
-├── database/             # Database layer
-│   └── session.py        # Async session management
-├── models/               # Data models
-│   ├── models.py         # SQLAlchemy models
-│   └── schemas.py        # Pydantic schemas
-├── utils/                # Utilities
-│   └── pagination.py     # Pagination helpers
-└── main.py               # FastAPI application with middleware
+├── auth/                 # 认证领域模块 (7 个核心文件)
+│   ├── models.py         # SQLAlchemy 用户模型
+│   ├── schemas.py        # Pydantic 认证模式
+│   ├── service.py        # 认证业务逻辑
+│   ├── router.py         # 认证 API 路由
+│   ├── dependencies.py   # 认证依赖注入
+│   ├── constants.py      # 认证常量定义
+│   └── exceptions.py     # 认证异常类
+├── posts/                # 文章领域模块 (7 个核心文件)
+│   ├── models.py         # SQLAlchemy 文章模型
+│   ├── schemas.py        # Pydantic 文章模式
+│   ├── service.py        # 文章业务逻辑
+│   ├── router.py         # 文章 API 路由
+│   ├── dependencies.py   # 文章依赖注入
+│   ├── constants.py      # 文章常量定义
+│   └── exceptions.py     # 文章异常类
+├── api/v1/               # API 路由注册
+│   └── __init__.py       # 统一路由注册
+├── core/                 # 核心基础设施
+│   ├── auth.py           # JWT 认证服务
+│   ├── config.py         # 配置管理
+│   ├── decorators.py     # 响应装饰器
+│   ├── logging.py        # 日志配置
+│   ├── redis.py          # Redis 缓存
+│   └── schemas.py        # 基础响应模式
+├── models/               # 共享数据模型
+│   └── models.py         # 基础模型类和审计日志
+├── database/             # 数据库层
+│   └── session.py        # 异步会话管理
+├── utils/                # 工具类
+│   └── pagination.py     # 分页助手
+└── main.py               # FastAPI 应用入口
 ```
+
+### Architecture Benefits
+
+- **Simplified structure**: Reduced from 17+ files per domain to 7 essential files
+- **Better maintainability**: Flat structure is easier to navigate and understand
+- **Consistent patterns**: Same structure across all domains
+- **Domain-driven**: Clear separation of business concerns
+- **FastAPI optimized**: Leverages FastAPI's strengths (dependency injection, type safety)
 
 ## Configuration
 
@@ -193,18 +219,46 @@ uv run pytest -k "test_auth_" -v
 
 ## Common Development Tasks
 
-### Adding New API Endpoint
+### Adding New Domain Module
 
 ```python
-# 1. Create schema in @app/models/schemas.py
+# 1. Create new domain directory with 7 core files
+app/new_domain/
+├── models.py         # SQLAlchemy models
+├── schemas.py        # Pydantic schemas
+├── service.py        # Business logic
+├── router.py         # API routes
+├── dependencies.py   # Dependency injection
+├── constants.py      # Constants
+└── exceptions.py     # Custom exceptions
+
+# 2. Register router in @app/api/v1/__init__.py
+from app.new_domain.router import router as new_domain_router
+api_router.include_router(new_domain_router)
+```
+
+### Adding New API Endpoint (in existing domain)
+
+```python
+# 1. Add schema in @app/{domain}/schemas.py
 class NewItemSchema(BaseModel):
     name: str = Field(..., min_length=1)
 
-# 2. Create model in @app/models/models.py
+# 2. Add model in @app/{domain}/models.py
 class NewItem(BaseModel):
     name = Column(String(100), nullable=False)
 
-# 3. Add router in @app/api/v1/
+# 3. Add business logic in @app/{domain}/service.py
+class DomainService:
+    @staticmethod
+    async def create_item(db: AsyncSession, item_data: NewItemSchema):
+        new_item = NewItem(**item_data.model_dump())
+        db.add(new_item)
+        await db.commit()
+        await db.refresh(new_item)
+        return new_item
+
+# 4. Add route in @app/{domain}/router.py
 @router.post("/items")
 @handle_response("Item created successfully")
 async def create_item(
@@ -212,13 +266,7 @@ async def create_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    new_item = NewItem(**item_data.model_dump())
-    db.add(new_item)
-    await db.commit()
-    await db.refresh(new_item)
-    return new_item
-
-# 4. Register router in @app/api/v1/__init__.py
+    return await DomainService.create_item(db, item_data)
 ```
 
 ### Adding Authentication
@@ -309,3 +357,60 @@ raise HTTPException(
 -   Pre-commit hooks automatically run on commit
 -   Manual pre-commit run: `uv run pre-commit run --all-files`
 -   See @.pre-commit-config.yaml for configured hooks
+
+## Project Architecture Guidelines
+
+### Key Principles
+
+1. **Domain-Driven Design (DDD)**: Organize code by business domains, not technical layers
+2. **Simplified Structure**: Avoid over-engineering - use flat modules with essential files only
+3. **Consistent Patterns**: Each domain follows the same 7-file structure
+4. **Clear Responsibilities**: Separate concerns between models, services, and routes
+5. **FastAPI Best Practices**: Leverage dependency injection, type safety, and async patterns
+
+### When to Use This Structure
+
+- **Small to medium projects**: Perfect for teams up to 10 developers
+- **Startups and MVPs**: Quick development with clear structure
+- **Domain-focused applications**: When business domains are well-defined
+- **FastAPI projects**: Optimized for FastAPI's strengths
+
+### When to Consider More Complex Structure
+
+- **Large enterprise applications**: Multiple teams working on different domains
+- **Microservices architecture**: When each domain becomes a separate service
+- **Complex business logic**: When domains have intricate internal structures
+- **Long-term maintenance**: When the project will be maintained for many years
+
+### Refactoring Guidelines
+
+- **Start simple**: Begin with the simplified structure
+- **Evolve as needed**: Add complexity only when justified by requirements
+- **Maintain consistency**: Keep the same patterns across all domains
+- **Document decisions**: Record architectural decisions in @docs/ directory
+
+### Migration from Traditional Structure
+
+If migrating from a traditional FastAPI structure:
+
+1. **Identify domains**: Group related functionality by business domain
+2. **Create domain modules**: Move domain-specific code to dedicated modules
+3. **Update imports**: Change all import paths to use new domain structure
+4. **Test thoroughly**: Ensure all functionality works after migration
+5. **Update documentation**: Reflect new structure in README and developer docs
+
+### Performance Considerations
+
+- **Lazy imports**: Use lazy imports to reduce startup time
+- **Database connections**: Use connection pooling and async operations
+- **Caching**: Implement Redis caching for frequently accessed data
+- **Pagination**: Always use pagination for large datasets
+- **Background tasks**: Use Celery or FastAPI background tasks for long-running operations
+
+### Security Best Practices
+
+- **JWT tokens**: Use secure token handling and expiration
+- **Input validation**: Validate all inputs with Pydantic schemas
+- **SQL injection prevention**: Use SQLAlchemy ORM instead of raw SQL
+- **CORS**: Configure CORS properly for your frontend
+- **Environment variables**: Never commit secrets to version control

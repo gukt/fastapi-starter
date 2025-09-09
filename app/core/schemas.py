@@ -18,7 +18,7 @@ class ErrorCode(str, Enum):
 
 
 class ApiResponse(BaseModel):
-    """统一API响应格式"""
+    """统一 API 响应格式"""
     data: Any | None = Field(None, description="响应数据")
     success: bool = Field(True, description="请求是否成功")
     message: str | None = Field(None, description="响应消息")
@@ -58,7 +58,7 @@ class PaginatedResponse(ApiResponse):
 class SortParams(BaseModel):
     """排序参数"""
     sort_by: str | None = Field(None, description="排序字段")
-    sort_order: str | None = Field("asc", regex="^(asc|desc)$", description="排序方向")
+    sort_order: str | None = Field("asc", pattern="^(asc|desc)$", description="排序方向")
 
 
 class FilterParams(BaseModel):

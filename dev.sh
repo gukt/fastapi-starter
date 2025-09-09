@@ -68,7 +68,14 @@ install_deps() {
 # 开发模式启动
 dev() {
     log_info "Starting development server..."
-    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    
+    # 检查端口 8000 是否被占用
+    if netstat -tulpn 2>/dev/null | grep :8000 >/dev/null; then
+        log_warning "Port 8000 is already in use, using port 8001 instead..."
+        uv run uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    else
+        uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    fi
 }
 
 # 生产模式启动

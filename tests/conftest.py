@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.database.session import Base, get_db
 from app.main import app
 
-# 测试数据库URL
+# 测试数据库 URL
 TEST_DATABASE_URL = settings.test_database_url
 
 # 创建测试数据库引擎

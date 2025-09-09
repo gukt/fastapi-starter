@@ -28,6 +28,8 @@ dependencies = [
     "loguru>=0.7.0",
     "httpx>=0.25.0",
     "structlog>=23.2.0",
+    "aiosqlite>=0.21.0",
+    "email-validator>=2.3.0",
 ]
 
 [project.optional-dependencies]
@@ -64,6 +66,7 @@ Changelog = "https://github.com/gukt/fastapi-starter/releases"
 fastapi-starter = "app.main:main"
 
 [tool.uv]
+index-url = "https://mirrors.aliyun.com/pypi/simple/"
 dev-dependencies = [
     "ruff>=0.1.0",
     "mypy>=1.7.0",

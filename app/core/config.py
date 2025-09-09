@@ -17,8 +17,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
 
     # Database
-    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/fastapi_starter"
-    test_database_url: str = "postgresql+asyncpg://user:password@localhost:5432/fastapi_starter_test"
+    database_url: str = (
+        "postgresql+asyncpg://user:password@localhost:5432/fastapi_starter"
+    )
+    test_database_url: str = (
+        "postgresql+asyncpg://user:password@localhost:5432/fastapi_starter_test"
+    )
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -40,7 +44,9 @@ class Settings(BaseSettings):
     max_file_size: int = 10485760  # 10MB
     upload_dir: str = "uploads"
 
-    @field_validator("allowed_hosts", "allowed_methods", "allowed_headers", mode="before")
+    @field_validator(
+        "allowed_hosts", "allowed_methods", "allowed_headers", mode="before"
+    )
     @classmethod
     def parse_list(cls, v):
         if isinstance(v, str):

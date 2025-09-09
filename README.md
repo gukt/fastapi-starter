@@ -77,33 +77,60 @@ docker-compose up -d postgres redis
 
 ## 项目结构
 
+本项目采用**领域驱动设计（DDD）**的简化架构，结合了 FastAPI 的最佳实践。
+
 ```
 fastapi-starter/
 ├── app/
-│   ├── api/              # API 路由
-│   │   └── v1/           # API v1
-│   ├── core/             # 核心模块
-│   │   ├── auth.py       # 认证服务
-│   │   ├── config.py     # 配置管理
-│   │   ├── decorators.py # 响应装饰器
-│   │   ├── logging.py    # 日志配置
-│   │   └── redis.py      # Redis 缓存
-│   ├── database/         # 数据库相关
-│   │   └── session.py    # 数据库会话
-│   ├── models/           # 数据模型
-│   │   ├── models.py     # SQLAlchemy 模型
-│   │   └── schemas.py    # Pydantic 模式
-│   ├── utils/            # 工具模块
-│   │   └── pagination.py # 分页工具
-│   └── main.py           # 应用入口
-├── tests/                # 测试文件
-├── docs/                 # 文档
-├── logs/                 # 日志文件
-├── .env.example         # 环境变量模板
-├── docker-compose.yml    # Docker Compose 配置
-├── pyproject.toml       # 项目配置
-└── dev.sh              # 开发脚本
+│   ├── auth/              # 认证领域模块
+│   │   ├── models.py      # 用户模型 (SQLAlchemy)
+│   │   ├── schemas.py     # Pydantic 数据模式
+│   │   ├── service.py     # 业务逻辑层
+│   │   ├── router.py      # API 路由层
+│   │   ├── dependencies.py # 依赖注入
+│   │   ├── constants.py   # 常量定义
+│   │   └── exceptions.py  # 自定义异常
+│   ├── posts/             # 文章领域模块
+│   │   ├── models.py      # 文章、标签模型
+│   │   ├── schemas.py     # Pydantic 数据模式
+│   │   ├── service.py     # 业务逻辑层
+│   │   ├── router.py      # API 路由层
+│   │   ├── dependencies.py # 依赖注入
+│   │   ├── constants.py   # 常量定义
+│   │   └── exceptions.py  # 自定义异常
+│   ├── api/               # API 路由聚合
+│   │   └── v1/           # API v1 版本
+│   ├── core/              # 核心基础设施
+│   │   ├── auth.py        # 认证服务
+│   │   ├── config.py      # 配置管理
+│   │   ├── decorators.py  # 响应装饰器
+│   │   ├── logging.py     # 日志配置
+│   │   ├── redis.py       # Redis 缓存
+│   │   └── schemas.py     # 基础响应模式
+│   ├── database/          # 数据库层
+│   │   └── session.py     # 数据库会话管理
+│   ├── models/            # 共享模型
+│   │   └── models.py      # 基础模型类
+│   ├── utils/             # 工具模块
+│   │   └── pagination.py  # 分页工具
+│   └── main.py            # FastAPI 应用入口
+├── docs/                  # 项目文档
+├── tests/                 # 测试文件
+├── logs/                  # 日志文件
+├── .env.example          # 环境变量模板
+├── docker-compose.yml     # Docker Compose 配置
+├── pyproject.toml        # 项目配置
+└── dev.sh               # 开发脚本
 ```
+
+### 架构特点
+
+-   **领域驱动设计**：每个业务领域（auth、posts）独立管理自己的模型、服务和 API
+-   **简化结构**：避免过度工程化，每个领域模块只包含必要的核心文件
+-   **清晰职责分离**：模型层、服务层、路由层、依赖层各司其职
+-   **统一响应格式**：使用装饰器自动包装成功/失败响应
+-   **完整的认证授权**：JWT 认证 + 权限控制
+-   **类型安全**：100% 类型注解覆盖
 
 ## API 文档
 
@@ -224,12 +251,34 @@ from app.database.session import create_tables
 await create_tables()
 ```
 
+### 添加新的领域模块
+
+1. **创建领域目录结构**：
+
+    ```bash
+    mkdir -p app/new_domain/
+    ```
+
+2. **创建核心文件**：
+
+    - `models.py` - SQLAlchemy 模型
+    - `schemas.py` - Pydantic 数据模式
+    - `service.py` - 业务逻辑层
+    - `router.py` - API 路由层
+    - `dependencies.py` - 依赖注入
+    - `constants.py` - 常量定义
+    - `exceptions.py` - 自定义异常
+
+3. **注册路由**：
+   在 `app/api/v1/__init__.py` 中添加新路由
+
 ### 添加新的 API 端点
 
-1. 在 `app/api/v1/` 目录下创建新的路由文件
-2. 在 `app/models/schemas.py` 中添加 Pydantic 模式
-3. 在 `app/models/models.py` 中添加 SQLAlchemy 模型
-4. 在 `app/api/v1/__init__.py` 中注册路由
+在现有领域模块中添加新的 API 端点：
+
+1. 在对应领域的 `service.py` 中添加业务逻辑
+2. 在对应领域的 `router.py` 中添加路由定义
+3. 在对应领域的 `schemas.py` 中添加数据模式
 
 ### 自定义装饰器
 
@@ -290,6 +339,14 @@ docker run -p 8000:8000 fastapi-starter
 MIT License
 
 ## 更新日志
+
+### v0.2.0 - 项目结构重构
+
+-   🏗️ **架构重构**：采用领域驱动设计（DDD）架构
+-   📁 **结构简化**：从复杂的分层结构简化为扁平的领域模块
+-   🔧 **模块化**：每个业务领域独立管理自己的模型、服务和 API
+-   📚 **文档更新**：完善的项目结构和最佳实践文档
+-   🚀 **开发体验**：更清晰的项目结构，提高开发效率
 
 ### v0.1.0
 

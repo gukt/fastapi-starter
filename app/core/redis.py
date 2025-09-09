@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class RedisCache:
-    """Redis缓存管理器"""
+    """Redis 缓存管理器"""
 
     def __init__(self):
         self.redis_client = redis.Redis.from_url(
@@ -20,7 +20,7 @@ class RedisCache:
             socket_connect_timeout=5,
             socket_timeout=5
         )
-        self.default_timeout = 3600  # 默认1小时过期
+        self.default_timeout = 3600  # 默认 1 小时过期
 
     async def get(self, key: str) -> Any | None:
         """获取缓存值"""
@@ -29,11 +29,11 @@ class RedisCache:
             if value is None:
                 return None
 
-            # 尝试解析JSON
+            # 尝试解析 JSON
             try:
                 return json.loads(value)
             except json.JSONDecodeError:
-                # 如果不是JSON，返回原始值
+                # 如果不是 JSON，返回原始值
                 return value
         except Exception as e:
             logger.error(f"Redis GET error: {e}")
@@ -56,7 +56,7 @@ class RedisCache:
                 try:
                     serialized_value = json.dumps(value, ensure_ascii=False)
                 except (TypeError, ValueError):
-                    # 如果不能序列化为JSON，使用pickle
+                    # 如果不能序列化为 JSON，使用 pickle
                     serialized_value = pickle.dumps(value)
                     use_json = False
             else:
@@ -142,14 +142,14 @@ class RedisCache:
             return []
 
     async def close(self):
-        """关闭Redis连接"""
+        """关闭 Redis 连接"""
         try:
             self.redis_client.close()
         except Exception as e:
             logger.error(f"Redis CLOSE error: {e}")
 
 
-# 全局Redis缓存实例
+# 全局 Redis 缓存实例
 redis_cache = RedisCache()
 
 

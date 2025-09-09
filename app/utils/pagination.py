@@ -183,7 +183,7 @@ class SortBuilder:
     def build_sort_clause(model: type[T], sort_by: str, sort_order: str = "asc"):
         """构建排序子句"""
         if not hasattr(model, sort_by):
-            # 默认按ID排序
+            # 默认按 ID 排序
             sort_by = "id"
 
         column = getattr(model, sort_by)
@@ -200,7 +200,7 @@ class QueryParams(BaseModel):
     size: int = Query(10, ge=1, le=100, description="每页大小")
     search: str | None = Query(None, description="搜索关键词")
     sort_by: str | None = Query(None, description="排序字段")
-    sort_order: str = Query("asc", regex="^(asc|desc)$", description="排序方向")
+    sort_order: str = Query("asc", pattern="^(asc|desc)$", description="排序方向")
 
     class Config:
         extra = "allow"
