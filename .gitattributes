@@ -1,0 +1,27 @@
+# 强制 UTF-8 编码
+* text=auto eol=lf encoding=utf-8
+
+# 文本文件类型
+*.md text diff=markdown encoding=utf-8
+*.py text diff=python encoding=utf-8
+*.yml text encoding=utf-8
+*.yaml text encoding=utf-8
+*.json text encoding=utf-8
+*.toml text encoding=utf-8
+*.txt text encoding=utf-8
+*.sh text encoding=utf-8
+*.ini text encoding=utf-8
+*.cfg text encoding=utf-8
+*.conf text encoding=utf-8
+
+# 二进制文件
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.whl binary

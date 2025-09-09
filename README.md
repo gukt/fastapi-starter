@@ -37,22 +37,26 @@
 ### 安装
 
 1. **克隆项目**
+
 ```bash
 git clone <repository-url>
 cd fastapi-starter
 ```
 
 2. **安装 uv**
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 3. **设置环境**
+
 ```bash
 ./dev.sh setup
 ```
 
 4. **启动服务**
+
 ```bash
 # 启动数据库和 Redis
 docker-compose up -d postgres redis
@@ -131,6 +135,7 @@ fastapi-starter/
 ### 响应格式
 
 #### 成功响应
+
 ```json
 {
   "data": "响应数据",
@@ -141,6 +146,7 @@ fastapi-starter/
 ```
 
 #### 错误响应
+
 ```json
 {
   "error": "ERROR_CODE",
@@ -286,6 +292,7 @@ MIT License
 ## 更新日志
 
 ### v0.1.0
+
 - 初始版本
 - 完整的认证系统
 - 分页搜索过滤

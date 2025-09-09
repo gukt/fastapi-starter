@@ -172,6 +172,7 @@ __pycache__/
 
 # uv
 .uv/
+uv.lock
 
 # Alembic
 alembic/versions/
