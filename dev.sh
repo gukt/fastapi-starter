@@ -108,8 +108,39 @@ typecheck() {
 # 数据库迁移
 migrate() {
     log_info "Running database migrations..."
-    # 这里可以集成Alembic
-    log_info "Database migrations completed."
+    DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fastapi_starter alembic upgrade head
+    log_success "Database migrations completed."
+}
+
+# 创建迁移文件
+migration_create() {
+    log_info "Creating new migration..."
+    if [ -z "$2" ]; then
+        log_error "Please provide a migration name"
+        echo "Usage: $0 migration-create \"migration name\""
+        exit 1
+    fi
+    DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fastapi_starter alembic revision --autogenerate -m "$2"
+    log_success "Migration created successfully."
+}
+
+# 回滚迁移
+migrate_down() {
+    log_info "Rolling back database migrations..."
+    DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fastapi_starter alembic downgrade -1
+    log_success "Database rollback completed."
+}
+
+# 查看迁移历史
+migrate_history() {
+    log_info "Migration history:"
+    DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fastapi_starter alembic history --verbose
+}
+
+# 查看当前迁移状态
+migrate_current() {
+    log_info "Current migration status:"
+    DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/fastapi_starter alembic current
 }
 
 # 创建超级用户
@@ -189,20 +220,29 @@ show_help() {
     echo "Usage: $0 [command]"
     echo ""
     echo "Commands:"
-    echo "  setup         - Setup development environment"
-    echo "  install       - Install dependencies"
-    echo "  dev           - Start development server"
-    echo "  prod          - Start production server"
-    echo "  test          - Run tests"
-    echo "  format        - Format code"
-    echo "  typecheck     - Run type checking"
-    echo "  migrate       - Run database migrations"
-    echo "  superuser     - Create superuser"
-    echo "  docker-dev    - Start Docker development environment"
-    echo "  docker-prod   - Start Docker production environment"
-    echo "  docker-stop   - Stop Docker containers"
-    echo "  clean         - Clean up cache files"
-    echo "  help          - Show this help message"
+    echo "  setup               - Setup development environment"
+    echo "  install             - Install dependencies"
+    echo "  dev                 - Start development server"
+    echo "  prod                - Start production server"
+    echo "  test                - Run tests"
+    echo "  format              - Format code"
+    echo "  typecheck           - Run type checking"
+    echo "  migrate             - Run database migrations"
+    echo "  migration-create    - Create new migration (requires name)"
+    echo "  migrate-down        - Rollback last migration"
+    echo "  migrate-history     - Show migration history"
+    echo "  migrate-current      - Show current migration status"
+    echo "  superuser           - Create superuser"
+    echo "  docker-dev          - Start Docker development environment"
+    echo "  docker-prod         - Start Docker production environment"
+    echo "  docker-stop         - Stop Docker containers"
+    echo "  clean               - Clean up cache files"
+    echo "  help                - Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 migration-create \"add_user_table\""
+    echo "  $0 migrate-down"
+    echo "  $0 migrate-history"
     echo ""
 }
 
@@ -242,6 +282,22 @@ main() {
         migrate)
             check_uv
             migrate
+            ;;
+        migration-create)
+            check_uv
+            migration_create "$@"
+            ;;
+        migrate-down)
+            check_uv
+            migrate_down
+            ;;
+        migrate-history)
+            check_uv
+            migrate_history
+            ;;
+        migrate-current)
+            check_uv
+            migrate_current
             ;;
         superuser)
             check_uv
