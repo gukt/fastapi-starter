@@ -1,24 +1,52 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: fastapi_starter
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+  web:
+    build: .
+    ports:
+      - "8000:8000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./logs:/app/logs
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:P@ssw0rd!@postgres:5432/fastapi_starter
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      - DEBUG=true
+
+  postgres:
+    # https://hub.docker.com/_/postgres/
+    image: postgres:17
+    restart: unless-stopped
+    # Set shared memory limit when using Docker Compose
+    shm_size: 128mb
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d fastapi_starter"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fastapi_starter"]
       interval: 10s
       timeout: 5s
       retries: 5
+    environment:
+      # 可选，该变量用于定义首次启动镜像时创建的默认数据库
+      # 如果不指定，将创建一个和 POSTGRES_USER 同名的数据库
+      POSTGRES_DB: fastapi_starter
+      # 可选，与 POSTGRES_PASSWORD 配合使用，用于设置用户及其密码
+      # 该变量会创建具有超级用户权限的指定用户，以及一个同名数据库
+      # 如果未指定该变量，则会使用默认用户 postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: P@ssw0rd!
 
   redis:
-    image: redis:7-alpine
+    image: redis:8
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -29,24 +57,6 @@ services:
       timeout: 3s
       retries: 3
 
-  web:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/fastapi_starter
-      - REDIS_URL=redis://redis:6379/0
-      - ENVIRONMENT=development
-      - DEBUG=true
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./logs:/app/logs
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
   # 开发环境（带热重载）
   dev:
     build:
@@ -54,11 +64,6 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/fastapi_starter
-      - REDIS_URL=redis://redis:6379/0
-      - ENVIRONMENT=development
-      - DEBUG=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +73,11 @@ services:
       - .:/app
       - ./logs:/app/logs
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/fastapi_starter
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      - DEBUG=true
 
 volumes:
   postgres_data:
